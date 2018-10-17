@@ -2,46 +2,57 @@ install.packages("pdftools")
 library(pdftools)
 download.file("file:///Users/moon/Desktop/asmsdirectoryofmembers.pdf","asmsdirectoryofmembers.pdf")
 text = pdf_text("asmsdirectoryofmembers.pdf")   ##read pdf
-text2 = strsplit(text,"\n")   ##wrap new line
-
-####transfer vector to string
-# install.packages("httr")
-# library(httr)
-# doc = content(text2,as = "text")  ##
+text1 = strsplit(text,"\n")   ##wrap new line
 
 
 #cutout the header
-pagehead = grep("ASMS Directory of Members", text2, fixed = TRUE)
-text2 = doc[(pagehead + 1):length(text2)]
-#######
+text2 = list()
 
-library(stringr)
-doc_split = str_split(text2, "  ")
-doc_split = lapply(doc_split,function(x) {
-  doc1 = x[1:8][x[1:8] != ""] [1]
-  if (is.na(doc1)) doc1 = ""
-  doc2 = x[x != ""]
-  if (doc1 != "") doc2 = doc2[-1]
-  if(length(doc2) == 0) doc2 = ""
-  if(is.na(doc2)) doc2 = "" 
-  doc3 = x[x !=""]
-  if(doc2 != "") doc3 = doc3[-1]
-  if(length(doc3) == 0) doc3 = ""
-  while (sum(nchar(doc3)) >65) {
-    doc1 = paste(doc1, doc2[1], doc3[1], collapse = " ")
-    doc2 = doc2[-1]
-    doc3 = doc3[-1]
+for(i in 1:32) {
+  text2[[i]] = text1[[i]][2:length(text1[[i]])]
+}
+
+
+##展平数据
+text3 = as.character(unlist(text2))
+
+##词与词之间空格超过2个，则换行
+text4 = strsplit(text3, "  ")
+
+##剔除无数据成分
+for (n in 1:length(text4)){
+a = which(text4[[n]] == "")
+for (i in 1:length(a)){
+  text4[[n]][a[i]] = NA
+}
+text4[[n]] = na.omit(text4[[n]])
+}
+
+##所有数据整理为一列
+text5 = list()
+
+for (j in 1:length(text4)) {
+  for(m in 1:length(text4[[j]])){
+  text5[m*j] = text4[[j]][m]
   }
-  doc3 = paste(doc3,collapse = " ")
-  doc1 = str_trim(doc1)
-  doc2 = str_trim(doc2)
-  doc3 = str_trim(doc3)
-  list(doc1 = doc1, doc2 = doc2, doc3 = doc3)
-})
+}
 
-doc1 = sapply(doc_split,'[[',1)
-doc2 = sapply(doc_split,'[[',2)
-doc3 = sapply(doc_split,'[[',3)
+
+##选取带有“电话”的行信息
+text_tel = grep("Tel:", text5)
+tel = text5[text_tel]
+
+##选取带有“邮箱”的行信息
+text_email = grep("@", text5)
+email = text5[text_email]
+
+install.packages("stringr")
+library(stringr)
+text_name = list()
+for (t in 1:length(text5)) {
+  text_name[t] = grep(str_to_upper(text5))
+}
+
 
 
 page_rows = c(0, which(doc1 == "page"), length(doc1))
@@ -56,3 +67,5 @@ for (i in 1:32) {
   text[[i]] = paste("/User/moon/Desktop", xlsxfile[i], sep = " ")
   write.csv(data.list2[[i]], text2)
 }
+
+
